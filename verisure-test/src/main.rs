@@ -26,8 +26,9 @@ async fn main() -> Result<(), BoxError> {
 }
 
 async fn login(client: &Client, username: &str, password: &str) -> Result<(), BoxError> {
+    println!("Logging in.\n");
     let req = client
-        .post("https://m-api02.verisure.com/auth/login")
+        .post("https://m-api01.verisure.com/auth/login")
         .body("")
         .header(http::header::USER_AGENT, "curl/7.81.0")
         .header(
@@ -49,6 +50,11 @@ async fn login(client: &Client, username: &str, password: &str) -> Result<(), Bo
         return Err(format!("Got status: {}", status).into());
     }
 
+    println!("Got status: {status}\n");
+
+    let body = resp.bytes().await?;
+    println!("Got response:\n{}\n", String::from_utf8_lossy(&body));
+
     #[derive(serde::Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
     #[allow(dead_code)]
@@ -59,25 +65,27 @@ async fn login(client: &Client, username: &str, password: &str) -> Result<(), Bo
         refresh_token_max_age_seconds: u32,
     }
 
-    let _resp = resp.json::<LoginResponse>().await?;
+    let _resp = serde_json::from_slice::<LoginResponse>(&body)?;
     Ok(())
 }
 
 async fn get_giid(client: &Client) -> Result<String, BoxError> {
+    println!("Getting giid.\n");
+
     let body = "
       [
         {
             \"operationName\": \"AccountInstallations\",
             \"variables\": {
-                \"email\": \"bjorn@wedako.se\"
+              \"email\": \"bjorn@wedako.se\"
             },
-            \"query\": \"query AccountInstallations($email: String!) {\\n  account(email: $email) {\\n    owainstallations {\\n      giid\\n      alias\\n      type\\n      subsidiary\\n      dealerId\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\"
-        }
+            \"query\": \"query AccountInstallations($email: String!) {\n  account(email: $email) {\n    owainstallations {\n      giid\n      alias\n      type\n      subsidiary\n      dealerId\n      installationOwner\n      subtype\n      __typename\n    }\n    __typename\n  }\n}\n\"
+          }
       ]
     ";
 
     let req = client
-        .post("https://m-api02.verisure.com/graphql")
+        .post("https://m-api01.verisure.com/graphql")
         .body(body)
         .header(http::header::USER_AGENT, "curl/7.81.0")
         .header(http::header::ACCEPT, mime::APPLICATION_JSON.to_string())
@@ -91,6 +99,11 @@ async fn get_giid(client: &Client) -> Result<String, BoxError> {
         dbg!(text);
         return Err(format!("Got status: {}", status).into());
     }
+
+    println!("Got status: {status}\n");
+
+    let body = resp.bytes().await?;
+    println!("Got response:\n{}\n", String::from_utf8_lossy(&body));
 
     #[derive(serde::Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
@@ -109,9 +122,7 @@ async fn get_giid(client: &Client) -> Result<String, BoxError> {
         dealer_id: Option<String>,
     }
 
-    let resp = resp
-        .json::<HashMap<String, HashMap<String, Account>>>()
-        .await?;
+    let resp = serde_json::from_slice::<HashMap<String, HashMap<String, Account>>>(&body)?;
     // let resp = resp.text().await?;
 
     // println!("{:#?}", resp);
@@ -120,6 +131,8 @@ async fn get_giid(client: &Client) -> Result<String, BoxError> {
 }
 
 async fn get_climate(client: &Client) -> Result<Vec<(String, f64)>, BoxError> {
+    println!("Getting climate.\n");
+
     let body = "
       [
         {
@@ -133,7 +146,7 @@ async fn get_climate(client: &Client) -> Result<Vec<(String, f64)>, BoxError> {
     ";
 
     let req = client
-        .post("https://m-api02.verisure.com/graphql")
+        .post("https://m-api01.verisure.com/graphql")
         .body(body)
         .header(http::header::USER_AGENT, "curl/7.81.0")
         .header(http::header::ACCEPT, mime::APPLICATION_JSON.to_string())
@@ -147,6 +160,11 @@ async fn get_climate(client: &Client) -> Result<Vec<(String, f64)>, BoxError> {
         dbg!(text);
         return Err(format!("Got status: {}", status).into());
     }
+
+    println!("Got status: {status}\n");
+
+    let body = resp.bytes().await?;
+    println!("Got response:\n{}\n", String::from_utf8_lossy(&body));
 
     #[derive(serde::Deserialize, Debug)]
     #[serde(rename_all = "camelCase")]
@@ -177,9 +195,7 @@ async fn get_climate(client: &Client) -> Result<Vec<(String, f64)>, BoxError> {
         // TODO gui
     }
 
-    let resp = resp
-        .json::<HashMap<String, HashMap<String, Installation>>>()
-        .await?;
+    let resp = serde_json::from_slice::<HashMap<String, HashMap<String, Installation>>>(&body)?;
     // let resp = resp.text().await?;
 
     // println!("{:#?}", resp);
