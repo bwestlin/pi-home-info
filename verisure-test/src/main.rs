@@ -5,6 +5,9 @@ use reqwest::Client;
 
 type BoxError = Box<dyn std::error::Error>;
 
+// Note that they seem to be switching between https://m-api01.verisure.com/ and https://m-api02.verisure.com/
+// where only one of them works, som might need to cycle between them if some specific error occurs
+
 #[tokio::main]
 async fn main() -> Result<(), BoxError> {
     let username =
@@ -27,6 +30,7 @@ async fn main() -> Result<(), BoxError> {
 
 async fn login(client: &Client, username: &str, password: &str) -> Result<(), BoxError> {
     println!("Logging in.\n");
+
     let req = client
         .post("https://m-api01.verisure.com/auth/login")
         .body("")
