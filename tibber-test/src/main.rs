@@ -1,5 +1,6 @@
 use cynic::QueryBuilder;
 use std::error::Error;
+use surf::http::convert::json;
 
 // Pull in the tibber schema we registered in build.rs
 #[cynic::schema("tibber")]
@@ -22,7 +23,7 @@ pub struct Viewer {
 
 #[derive(cynic::QueryFragment, Debug)]
 pub struct Home {
-    pub subscriptions: Vec<Option<Subscription>>,
+    pub current_subscription: Option<Subscription>,
 }
 
 #[derive(cynic::QueryFragment, Debug)]
@@ -73,6 +74,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let token = std::env::var("TIBBER").map_err(|_| format!("No TIBBER env var set"))?;
 
     let operation = MyQuery::build(());
+
+    println!("operation={}", json!(operation));
 
     let result = surf::post("https://api.tibber.com/v1-beta/gql")
         .header("Authorization", format!("Bearer {token}"))
