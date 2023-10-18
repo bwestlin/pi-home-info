@@ -124,8 +124,6 @@ async fn get_giid(client: &Client, username: &str) -> Result<String, BoxError> {
 }
 
 async fn get_climate(client: &Client, giid: &str) -> Result<Vec<(String, f64)>, BoxError> {
-    println!("Getting climate.\n");
-
     let body = format!("
       [
         {{

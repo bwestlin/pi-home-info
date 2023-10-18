@@ -86,7 +86,6 @@ pub async fn fetch_tibber_data() -> Result<Option<TibberData>, BoxError> {
             .and_then(|dt| dt.with_second(0))
             .and_then(|dt| dt.with_nanosecond(0))
             .unwrap();
-        println!("start={start:?}");
 
         for home in data.viewer.homes.iter().flatten() {
             if let Some(sub) = &home.current_subscription {
