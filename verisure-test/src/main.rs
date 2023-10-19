@@ -19,10 +19,10 @@ async fn main() -> Result<(), BoxError> {
 
     login(&client, &username, &password).await?;
 
-    let giid = get_giid(&client).await?;
+    let giid = get_giid(&client, &username).await?;
     dbg!(&giid);
 
-    let climate = get_climate(&client).await?;
+    let climate = get_climate(&client, &giid).await?;
     dbg!(climate);
 
     Ok(())
@@ -73,27 +73,27 @@ async fn login(client: &Client, username: &str, password: &str) -> Result<(), Bo
     Ok(())
 }
 
-async fn get_giid(client: &Client) -> Result<String, BoxError> {
+async fn get_giid(client: &Client, username: &str) -> Result<String, BoxError> {
     println!("Getting giid.\n");
 
-    let body = "
+    let body = format!("
       [
-        {
+        {{
             \"operationName\": \"AccountInstallations\",
-            \"variables\": {
-              \"email\": \"bjorn@wedako.se\"
-            },
-            \"query\": \"query AccountInstallations($email: String!) {\n  account(email: $email) {\n    owainstallations {\n      giid\n      alias\n      type\n      subsidiary\n      dealerId\n      installationOwner\n      subtype\n      __typename\n    }\n    __typename\n  }\n}\n\"
-          }
+            \"variables\": {{
+              \"email\": \"{username}\"
+            }},
+            \"query\": \"query AccountInstallations($email: String!) {{\n  account(email: $email) {{\n    owainstallations {{\n      giid\n      alias\n      type\n      subsidiary\n      dealerId\n      installationOwner\n      subtype\n      __typename\n    }}\n    __typename\n  }}\n}}\n\"
+          }}
       ]
-    ";
+    ");
 
     let req = client
         .post("https://m-api01.verisure.com/graphql")
-        .body(body)
         .header(http::header::USER_AGENT, "curl/7.81.0")
         .header(http::header::ACCEPT, mime::APPLICATION_JSON.to_string())
-        .header(http::header::CONTENT_LENGTH, format!("{}", body.len()));
+        .header(http::header::CONTENT_LENGTH, format!("{}", body.len()))
+        .body(body);
 
     let resp = req.send().await?;
 
@@ -134,27 +134,29 @@ async fn get_giid(client: &Client) -> Result<String, BoxError> {
     Ok(resp["data"]["account"].owainstallations[0].giid.clone())
 }
 
-async fn get_climate(client: &Client) -> Result<Vec<(String, f64)>, BoxError> {
+async fn get_climate(client: &Client, giid: &str) -> Result<Vec<(String, f64)>, BoxError> {
     println!("Getting climate.\n");
 
-    let body = "
+    let body = format!("
       [
-        {
+        {{
             \"operationName\": \"Climate\",
-            \"variables\": {
-              \"giid\": \"112832675891\"
-            },
-            \"query\": \"query Climate($giid: String!) {\\n  installation(giid: $giid) {\\n    climates {\\n      device {\\n        deviceLabel\\n        area\\n        gui {\\n          label\\n          support\\n          __typename\\n        }\\n        __typename\\n      }\\n      humidityEnabled\\n      humidityTimestamp\\n      humidityValue\\n      temperatureTimestamp\\n      temperatureValue\\n      supportsThresholdSettings\\n      thresholds {\\n        aboveMaxAlert\\n        belowMinAlert\\n        sensorType\\n        __typename\\n      }\\n      __typename\\n    }\\n    __typename\\n  }\\n}\\n\"
-          }
+            \"variables\": {{
+              \"giid\": \"{giid}\"
+            }},
+            \"query\": \"query Climate($giid: String!) {{\\n  installation(giid: $giid) {{\\n    climates {{\\n      device {{\\n        deviceLabel\\n        area\\n        gui {{\\n          label\\n          support\\n          __typename\\n        }}\\n        __typename\\n      }}\\n      humidityEnabled\\n      humidityTimestamp\\n      humidityValue\\n      temperatureTimestamp\\n      temperatureValue\\n      supportsThresholdSettings\\n      thresholds {{\\n        aboveMaxAlert\\n        belowMinAlert\\n        sensorType\\n        __typename\\n      }}\\n      __typename\\n    }}\\n    __typename\\n  }}\\n}}\\n\"
+          }}
       ]
-    ";
+    ");
+
+    // dbg!(&body);
 
     let req = client
         .post("https://m-api01.verisure.com/graphql")
-        .body(body)
         .header(http::header::USER_AGENT, "curl/7.81.0")
         .header(http::header::ACCEPT, mime::APPLICATION_JSON.to_string())
-        .header(http::header::CONTENT_LENGTH, format!("{}", body.len()));
+        .header(http::header::CONTENT_LENGTH, format!("{}", body.len()))
+        .body(body);
 
     let resp = req.send().await?;
 
